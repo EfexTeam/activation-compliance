@@ -3,6 +3,9 @@ name: Deploy lambda
 on:
   workflow_call:
     inputs:
+      aws_account_id:
+        required: true
+        type: string
       aws_iam_role_for_lambda_deployer_arn:
         required: true
         type: string
@@ -60,7 +63,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v5.1.0
         with:
           aws-region: ${{ inputs.aws_region }}
-          role-to-assume: ${{ inputs.aws_iam_role_for_lambda_deployer_arn }}
+          role-to-assume: "arn:aws:iam::${{ inputs.aws_account_id }}:role/${{ inputs.aws_iam_role_for_lambda_deployer_arn }}"
           role-session-name: "github-actions-${{ github.run_id }}"
 
       - name: Deploy to AWS Lambda

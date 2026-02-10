@@ -2,14 +2,16 @@ name: Deploy extract_company_persons
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
     paths:
       - "src/lambdas/extract_company_persons/**"
+  workflow_dispatch:
 
 jobs:
   deploy:
     uses: ./.github/workflows/deploy-lambda.yml
     with:
+      aws_account_id: ${{ vars.AWS_DEV_ACCOUNT_ID }}
       aws_iam_role_for_lambda_deployer_arn: ${{ vars.AWS_IAM_ROLE_FOR_LAMBDA_DEPLOYER }}
       aws_region: ${{ vars.AWS_GLOBAL_REGION }}
       lambda_directory: src/lambdas/extract_company_persons
