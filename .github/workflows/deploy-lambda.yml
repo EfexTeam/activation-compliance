@@ -1,0 +1,76 @@
+name: Deploy lambda
+
+on:
+  workflow_call:
+    inputs:
+      aws_iam_role_for_lambda_deployer_arn:
+        required: true
+        type: string
+      aws_region:
+        required: true
+        type: string
+      lambda_directory:
+        required: true
+        type: string
+      lambda_name:
+        required: true
+        type: string
+      python_version:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    name: Package & deploy
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Python ${{ inputs.python_version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Install dependencies
+        env:
+          LAMBDA_DIRECTORY: ${{ inputs.lambda_directory }}
+        run: |
+          mkdir -p ${LAMBDA_DIRECTORY}/package
+          if [ -f "${LAMBDA_DIRECTORY}/requirements.txt" ]; then
+            pip install \
+              -r ${LAMBDA_DIRECTORY}/requirements.txt \
+              -t ${LAMBDA_DIRECTORY}/package
+          fi
+
+      - name: Package Lambda ZIP
+        working-directory: ${{ inputs.lambda_directory }}
+        run: |
+          cp *.py package/
+
+          cd package
+          zip -r ../deployment.zip . -q
+
+          echo "Deployment package size: $(du -h ../deployment.zip | cut -f1)"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5.1.0
+        with:
+          aws-region: ${{ inputs.aws_region }}
+          role-to-assume: ${{ inputs.aws_iam_role_for_lambda_deployer_arn }}
+          role-session-name: "github-actions-${{ github.run_id }}"
+
+      - name: Deploy to AWS Lambda
+        working-directory: ${{ inputs.lambda_directory }}
+        env:
+          LAMBDA_NAME: ${{ inputs.lambda_name }}
+        run: |
+          aws lambda update-function-code \
+            --function-name ${LAMBDA_NAME} \
+            --zip-file fileb://deployment.zip \
+            --publish
+
+          echo "Lambda '${LAMBDA_NAME}' deployed successfully"
