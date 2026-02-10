@@ -15,5 +15,5 @@ jobs:
       aws_iam_role_for_lambda_deployer_arn: ${{ vars.AWS_IAM_ROLE_FOR_LAMBDA_DEPLOYER }}
       aws_region: ${{ vars.AWS_GLOBAL_REGION }}
       lambda_directory: src/lambdas/periodic-screening-update-view
-      lambda_name: periodic-screening-update-view
+      lambda_name: efex-ext-dev-use1-tl-extract-company-persons
       python_version: "3.14"
