@@ -2,7 +2,7 @@ name: Deploy extract_company_persons
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
     paths:
       - "src/lambdas/extract_company_persons/**"
   workflow_dispatch:

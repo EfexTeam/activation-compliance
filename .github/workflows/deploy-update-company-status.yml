@@ -2,7 +2,7 @@ name: Deploy update_company_status
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
     paths:
       - "src/lambdas/update_company_status/**"
   workflow_dispatch:

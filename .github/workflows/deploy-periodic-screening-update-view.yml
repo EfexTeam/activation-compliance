@@ -2,7 +2,7 @@ name: Deploy periodic-screening-update-view
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
     paths:
       - "src/lambdas/periodic-screening-update-view/**"
   workflow_dispatch:
