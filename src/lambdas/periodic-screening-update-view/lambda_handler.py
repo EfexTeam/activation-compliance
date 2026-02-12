@@ -1,21 +1,12 @@
-import os
-import json
 import logging
 import psycopg2
-import boto3
 from datetime import datetime
 
-# --- Configuración Global ---
+from db_utils import get_connection
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-session = boto3.session.Session()
-secrets_client = session.client(service_name='secretsmanager')
-
-def get_secret():
-    secret_name = os.environ['SECRET_NAME']
-    response = secrets_client.get_secret_value(SecretId=secret_name)
-    return json.loads(response['SecretString'])
 
 def lambda_handler(event, context):
     """
@@ -23,20 +14,10 @@ def lambda_handler(event, context):
     """
     conn = None
     start_time = datetime.now()
-    
+
     try:
-        # 1. Conexión a la BD
-        creds = get_secret()
-        conn = psycopg2.connect(
-            host=creds['host'],
-            database=creds['dbname'],
-            user=creds['username'],
-            password=creds['password'],
-            port=creds.get('port', 5432)
-        )
-        
-        # IMPORTANTE: El REFRESH CONCURRENTLY no puede correr dentro de una transacción.
-        # Ponemos el autocommit en True.
+        conn = get_connection()
+        # REFRESH CONCURRENTLY no puede correr dentro de una transacción.
         conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
         
         with conn.cursor() as cur:
@@ -53,8 +34,8 @@ def lambda_handler(event, context):
         }
 
     except Exception as e:
-        logger.error(f"Error al refrescar la vista: {str(e)}")
-        raise e
+        logger.error("Error al refrescar la vista: %s", str(e))
+        raise
     finally:
         if conn:
             conn.close()

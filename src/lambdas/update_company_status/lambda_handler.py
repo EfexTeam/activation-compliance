@@ -1,27 +1,16 @@
-import os
-import json
 import logging
-import boto3
-import psycopg2
 from datetime import datetime
 
-# --- Configuración Global ---
+from db_utils import get_connection
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 INACTIVE_STATUS_ID = 1
 ACTIVE_STATUS_ID = 2
 OWNER_ROLE_ID = 1
-FETCH_ITERSIZE = 2000  # Tamaño del micro-lote para List Comprehension
-TIMEOUT_MARGIN_MS = 20000 
-
-session = boto3.session.Session()
-secrets_client = session.client(service_name='secretsmanager')
-
-def get_secret():
-    secret_name = os.environ['SECRET_NAME']
-    response = secrets_client.get_secret_value(SecretId=secret_name)
-    return json.loads(response['SecretString'])
+FETCH_ITERSIZE = 2000
+TIMEOUT_MARGIN_MS = 20000
 
 def evaluate_enterprise_status(row):
     """
@@ -44,11 +33,7 @@ def lambda_handler(event, context):
     stats = {"total": 0, "act": 0, "inact": 0, "timeout": False}
 
     try:
-        creds = get_secret()
-        conn = psycopg2.connect(
-            host=creds['host'], database=creds['dbname'],
-            user=creds['username'], password=creds['password'], port=creds.get('port', 5432)
-        )
+        conn = get_connection()
         
         # Cursor nombrado para Server-side streaming
         cursor_name = f"list_comp_cursor_{int(start_time.timestamp())}"
@@ -120,11 +105,13 @@ def lambda_handler(event, context):
         }
 
     except Exception as e:
-        if conn: conn.rollback()
-        logger.error(f"Error: {str(e)}")
-        raise e
+        if conn:
+            conn.rollback()
+        logger.error("Error: %s", str(e))
+        raise
     finally:
-        if conn: conn.close()
+        if conn:
+            conn.close()
 
 
 
